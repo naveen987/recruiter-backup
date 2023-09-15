@@ -1,0 +1,6 @@
+{
+    "python.analysis.extraPaths": [
+        "./data/database",
+        "./src/evaluation_system"
+    ]
+}

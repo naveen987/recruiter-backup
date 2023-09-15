@@ -1,0 +1,22 @@
+<!-- email_interface.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recruiter Interface</title>
+</head>
+<body>
+    <h1>Welcome Recruiter!</h1>
+    <p>Click the button below to send emails to the top candidates.</p>
+    <button onclick="sendEmails()">Send Emails</button>
+
+    <script>
+        function sendEmails() {
+            fetch('/send_emails')
+                .then(response => response.json())
+                .then(data => alert(data.message));
+        }
+    </script>
+</body>
+</html>
