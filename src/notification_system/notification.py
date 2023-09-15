@@ -1,16 +1,19 @@
 import os
-from dotenv import load_dotenv, find_dotenv
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import sys
 import secrets
+from dotenv import find_dotenv, load_dotenv
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer, SignatureExpired, BadSignature
-from flask import Flask, jsonify, request, redirect, render_template
+from flask import Flask, jsonify, render_template
+import tkinter as tk
+from tkinter import messagebox
 
 sys.path.append('c:\\Users\\navi\\Recuriter_selection_system\\src\\evaluation_system')
 from evaluate import get_best_cluster_users
 
+# Loading environment variables
 load_dotenv(find_dotenv())
 
 # Define email account details
@@ -21,13 +24,11 @@ SECRET_KEY = secrets.token_hex(16)  # Generate a secret key
 app = Flask(__name__)
 app.config['SECRET_KEY'] = SECRET_KEY
 
-# Function to create a secure timed link
 def generate_secure_link(base_link):
-    s = Serializer(app.config['SECRET_KEY'], expires_in=120)  # 120 seconds = 2 minutes
+    s = Serializer(app.config['SECRET_KEY'], expires_in=120)
     token = s.dumps({'link_valid': True}).decode('utf-8')
     return base_link + token
 
-# Function to verify the secure timed link
 def verify_secure_link(token):
     s = Serializer(app.config['SECRET_KEY'])
     try:
@@ -49,13 +50,14 @@ def send_emails_route():
 
 @app.route('/challenge/<token>', methods=['GET'])
 def challenge(token):
-    # This will check the token
     if verify_secure_link(token):
-        return redirect('https://forms.gle/hnxVuKNnStZ2twyy8')
+        root = tk.Tk()
+        app = ChallengeApp(root)
+        root.mainloop()
+        return "Challenge completed!", 200
     else:
         return "The link has expired or is invalid.", 403
 
-# Function to send an email
 def doodle_mail(recruiter_email, recruiter_password, candidate_email, subject, body):
     try:
         server = smtplib.SMTP('smtp.gmail.com', 587)
@@ -71,18 +73,17 @@ def doodle_mail(recruiter_email, recruiter_password, candidate_email, subject, b
 
         server.sendmail(recruiter_email, candidate_email, message.as_string())
         server.quit()
-        
-        return True  # Doodle_mail sent successfully
+
+        return True
     except Exception as e:
         print(f"Failed to send email: {str(e)}")
-        return False  # Doodle_mail sending failed
+        return False
 
-# Function to inform the potential candidates and provide the coding challenge for the next round.
 def shortlist_mail(candidate_email):
     subject = 'Congratulations! You are Shortlisted for Doodle'
-    message = f'Hello,\n\nCongratulations! We are happy to inform that you have been shortlisted for a coding challenge at Doodle. Please find the link for the coding challenege below and submit it within the alloted time.'
+    message = f'Hello,\n\nCongratulations! We are happy to inform that you have been shortlisted for a coding challenge at Doodle. Please find the link for the coding challenge below and submit it within the alloted time.'
     
-    link = generate_secure_link('http://127.0.0.1:5000/challenge/')  # Use your Flask app to verify the token
+    link = generate_secure_link('http://127.0.0.1:5000/challenge/')
     
     message += f'\n\nClick the link below to access the coding challenge UI:'
     message += f'\n\n{link}'
@@ -90,17 +91,63 @@ def shortlist_mail(candidate_email):
     return doodle_mail(recruiter_email, recruiter_password, candidate_email, subject, message)
 
 def send_emails_to_top_users():
-    # Get the top 10 best users from evaluate.py
     best_users = get_best_cluster_users().head(10)
 
     for _, user in best_users.iterrows():
         candidate_email = "doodlepython8+" + user['Name'].replace(" ", "") + "@gmail.com"
         shortlisting_success = shortlist_mail(candidate_email)
-        
+
         if shortlisting_success:
             print(f"Shortlisting email sent successfully to {user['Name']}.")
         else:
             print(f"Failed to send shortlisting email to {user['Name']}.")
+
+class ChallengeApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Doodle Challenge")
+
+        self.time_left = 120
+        self.timer_label = tk.Label(root, text=f"Time left: {self.time_left} seconds")
+        self.timer_label.pack(pady=10)
+
+        self.questions = [
+            "Question 1: Describe your approach to solving X.",
+            "Question 2: How would you implement a function to do Y?",
+            "Question 3: Explain the differences between A and B.",
+            "Question 4: Write a code snippet to achieve Z."
+        ]
+        self.answer_fields = []
+
+        for q in self.questions:
+            q_label = tk.Label(root, text=q, wraplength=500)
+            q_label.pack(pady=10)
+            answer_field = tk.Text(root, height=10, width=50)
+            answer_field.pack(pady=10)
+            self.answer_fields.append(answer_field)
+
+        self.submit_button = tk.Button(root, text="Submit", command=self.submit_response)
+        self.submit_button.pack(pady=10)
+
+        self.update_timer()
+
+    def update_timer(self):
+        if self.time_left > 0:
+            self.timer_label.config(text=f"Time left: {self.time_left} seconds")
+            self.time_left -= 1
+            self.root.after(1000, self.update_timer)
+        else:
+            self.submit_button.config(state=tk.DISABLED)
+            messagebox.showinfo("Time's up!", "Your time has expired!")
+
+    def submit_response(self):
+        user_solutions = [field.get("1.0", tk.END).strip() for field in self.answer_fields]
+
+        print("User's solutions:")
+        for idx, solution in enumerate(user_solutions, 1):
+            print(f"Question {idx}: {solution}")
+
+        self.root.quit()
 
 if __name__ == '__main__':
     app.run(debug=True)
