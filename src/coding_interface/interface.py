@@ -60,7 +60,12 @@ class ChallengeApp:
 
     def on_timer_expired(self):
         self.submit_button.config(state=tk.DISABLED)
-        messagebox.showinfo("Time's up!", "Your time has expired!")
+        alert_window = tk.Toplevel(self.root)
+        alert_window.title("Alert")
+        alert_label = tk.Label(alert_window, text="Time's up! Your time has expired!")
+        alert_label.pack(pady=20, padx=20)
+        ok_button = tk.Button(alert_window, text="OK", command=alert_window.destroy)
+        ok_button.pack(pady=20)
 
     def update_timer(self):
         if self.time_left > 0:
