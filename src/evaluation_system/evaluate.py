@@ -3,11 +3,16 @@
 import pandas as pd
 from sklearn.cluster import KMeans
 from matplotlib import pyplot as plt
+import sys
+sys.path.append('/hushHushRecruiter/data/database/databaseConnection') 
+from data.database.databaseConnection import engine
 
-#importing data from csv to pandas df
-data = pd.read_csv("Stack.csv")
-data
 
+
+
+
+# Fetching data from the database instead of CSV
+data = pd.read_sql("SELECT * FROM processed_data", engine)
 data.columns
 data.dtypes
 
